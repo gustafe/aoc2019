@@ -34,7 +34,7 @@ my $id = 1;
 foreach my $line (@input) {
     say "loading a line....";
     my $cur = [ 0, 0, 0 ];
-    push @{ $grid->{0}->{0} }, { id => $id, dir => 'O' };
+    push @{ $grid->{0}->{0} }, { id => $id, $id=>0 };
     my @list = split( /,/, $line );
     my $prev = '';
     while (@list) {
