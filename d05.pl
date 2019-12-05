@@ -74,25 +74,25 @@ sub perform_op {
     my $a2 = $mask->[1] ? $arg2 : $state[$arg2];
 
     my %ops = (
-        1 => sub { $state[$dest] = $a1 + $a2; $ptr += 4 },
-        2 => sub { $state[$dest] = $a1 * $a2; $ptr += 4 },
-        3 => sub { $state[$arg1] = $indata;   $ptr += 2 },
-        4 => sub { push @output, $a1; $ptr += 2 },
-        5 => sub {
+        1 => sub { $state[$dest] = $a1 + $a2; $ptr += 4 }, # add
+        2 => sub { $state[$dest] = $a1 * $a2; $ptr += 4 }, # multiply
+        3 => sub { $state[$arg1] = $indata;   $ptr += 2 }, # write
+        4 => sub { push @output, $a1; $ptr += 2 },         # read
+        5 => sub { # jump-if-true
             if ( $a1 != 0 ) { $ptr = $a2 }
             else            { $ptr += 3 }
         },
 
-        6 => sub {
+        6 => sub { # jump-if-false
             if ( $a1 == 0 ) { $ptr = $a2 }
             else            { $ptr += 3 }
         },
-        7 => sub {
+        7 => sub { # less than
             if   ( $a1 < $a2 ) { $state[$dest] = 1 }
             else               { $state[$dest] = 0 }
             $ptr += 4;
         },
-        8 => sub {
+        8 => sub { # equals
             if   ( $a1 == $a2 ) { $state[$dest] = 1 }
             else                { $state[$dest] = 0 }
             $ptr += 4;
@@ -102,7 +102,7 @@ sub perform_op {
     $ops{$opcode}->();
 }
 
-sub dump_state {
+sub dump_state { # shows a pretty-printed grid of the current state
     my @show = @state;
     print '   ';
     for my $i ( 0 .. 9 ) { printf( "___%d ", $i ) }
