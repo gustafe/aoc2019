@@ -51,7 +51,7 @@ while ( $state[$ptr] != $halt ) {
         $mask = [ reverse @instr ];
     }
     else {
-	$mask = [ 0, 0, 0 ];
+        $mask = [ 0, 0, 0 ];
     }
     say "$ptr: $op $in1 $in2 $out [", join( ',', @$mask ), ']' if $debug;
     perform_op( $op, $in1, $in2, $out, $mask );
@@ -74,35 +74,44 @@ sub perform_op {
     my $a2 = $mask->[1] ? $arg2 : $state[$arg2];
 
     my %ops = (
-        1 => sub { $state[$dest] = $a1 + $a2; $ptr += 4 }, # add
-        2 => sub { $state[$dest] = $a1 * $a2; $ptr += 4 }, # multiply
-        3 => sub { $state[$arg1] = $indata;   $ptr += 2 }, # write
-        4 => sub { push @output, $a1; $ptr += 2 },         # read
-        5 => sub { # jump-if-true
+
+        # add
+        1 => sub { $state[$dest] = $a1 + $a2; $ptr += 4 },
+
+        # multiply
+        2 => sub { $state[$dest] = $a1 * $a2; $ptr += 4 },
+
+        # write - note the $arg1 here, we don't want to input anything
+        # in the current state! I.e. implicit positional mode is a no-no
+        3 => sub { $state[$arg1] = $indata; $ptr += 2 },
+
+        # read
+        4 => sub { push @output, $a1; $ptr += 2 },
+
+	5 => sub {    # jump-if-true
             if ( $a1 != 0 ) { $ptr = $a2 }
             else            { $ptr += 3 }
         },
-
-        6 => sub { # jump-if-false
+        6 => sub {    # jump-if-false
             if ( $a1 == 0 ) { $ptr = $a2 }
             else            { $ptr += 3 }
         },
-        7 => sub { # less than
+        7 => sub {    # less than
             if   ( $a1 < $a2 ) { $state[$dest] = 1 }
             else               { $state[$dest] = 0 }
             $ptr += 4;
         },
-        8 => sub { # equals
+        8 => sub {    # equals
             if   ( $a1 == $a2 ) { $state[$dest] = 1 }
             else                { $state[$dest] = 0 }
             $ptr += 4;
         },
-	      );
+    );
     die "unknown opcode: $opcode!" unless exists $ops{$opcode};
     $ops{$opcode}->();
 }
 
-sub dump_state { # shows a pretty-printed grid of the current state
+sub dump_state {      # shows a pretty-printed grid of the current state
     my @show = @state;
     print '   ';
     for my $i ( 0 .. 9 ) { printf( "___%d ", $i ) }
