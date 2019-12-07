@@ -4,61 +4,29 @@
 #   Discussion: http://gerikson.com/blog/comp/Advent-of-Code-2019.html#d05
 #      License: http://gerikson.com/files/AoC2019/UNLICENSE
 ###########################################################
-
 use Modern::Perl '2015';
-
 # useful modules
-use List::Util qw/sum all/;
+use List::Util qw/sum/;
 use Data::Dumper;
 use Test::Simple tests => 1;
 #### INIT - load input data from file into array
-
-my $debug = 0;
-my @input;
-my $file = 'input.txt';
+my $testing = 0;
+my $debug   = 0;
+my @file_contents;
+my $file = $testing ? 'test.txt' : 'input.txt';
 open( my $fh, '<', "$file" );
-while (<$fh>) { chomp; s/\r//gm; push @input, $_; }
+while (<$fh>) { chomp; s/\r//gm; push @file_contents, $_; }
 
 ### CODE
-my $part2 = shift || 0;
+my $halt        = 99;
+my $part2       = shift || 0;
+my $initial_val = $part2 ? 5 : 1;
 
-my @initial = split( /,/, $input[0] );
-my $indata = $part2 ? 5 : 1;
+my $program = [ split( ',', $file_contents[0] ) ];
 
-my @state = @initial;
-my @output;
-
-sub dump_state;
-my $halt = 99;
-
-my $ptr = 0;
-while ( $state[$ptr] != $halt ) {
-
-    my ( $op, $in1, $in2, $out ) = @state[ $ptr, $ptr + 1, $ptr + 2, $ptr + 3 ];
-    my $mask;
-    if ( length $op > 2 )
-    {    # assume values in this position are either 2 digits or more
-
-        my @instr = split( //, $op );
-        my @tail;
-        for ( 1, 2 ) {
-            unshift @tail, pop @instr;
-        }
-        $op = join( '', @tail ) + 0;
-        while ( scalar @instr < 3 ) {
-            unshift @instr, 0;
-        }
-        $mask = [ reverse @instr ];
-    }
-    else {
-        $mask = [ 0, 0, 0 ];
-    }
-    say "$ptr: $op $in1 $in2 $out [", join( ',', @$mask ), ']' if $debug;
-    perform_op( $op, $in1, $in2, $out, $mask );
-
-}
-my $ans = $output[-1];
-
+#dump_state($program);
+my ( $out_state, $out ) = run_vm( $program, [$initial_val] );
+my $ans = $out->[-1];
 if ($part2) {
     ok( $ans == 7616021 );
 }
@@ -67,52 +35,82 @@ else {
 }
 say $part2? "Part 2: " : "Part 1: ", $ans;
 
-### Subs
-sub perform_op {
-    my ( $opcode, $arg1, $arg2, $dest, $mask ) = @_;
-    my $a1 = $mask->[0] ? $arg1 : $state[$arg1];
-    my $a2 = $mask->[1] ? $arg2 : $state[$arg2];
+### SUBS
 
-    my %ops = (
+sub run_vm {
+    my ( $state, $in_val ) = @_;
 
-        # add
-        1 => sub { $state[$dest] = $a1 + $a2; $ptr += 4 },
+    #    my @state = @{$program};
+    my @input = @{$in_val};
+    my $ptr   = 0;
+    my $out_val;
+    while ( $state->[$ptr] != $halt ) {
+        my ( $op, $a1, $a2, $a3 ) =
+          @$state[ $ptr, $ptr + 1, $ptr + 2, $ptr + 3 ];
+        say join( ' ', $ptr, $op, $a1, $a2, $a3 ) if $debug;
+        my $mask;
+        if ( length $op > 2 )
+        {    # assume values in this position are either 2 digits or more
 
-        # multiply
-        2 => sub { $state[$dest] = $a1 * $a2; $ptr += 4 },
+            my @instr = split( //, $op );
+            my @tail;
+            for ( 1, 2 ) {
+                unshift @tail, pop @instr;
+            }
+            $op = join( '', @tail ) + 0;
+            while ( scalar @instr < 3 ) {
+                unshift @instr, 0;
+            }
+            $mask = [ reverse @instr ];
+        }
+        else {
+            $mask = [ 0, 0, 0 ];
+        }
+        my %ops = (
+            1 => sub { $state->[ $_[2] ] = $_[0] + $_[1]; $ptr += 4 },
+            2 => sub { $state->[ $_[2] ] = $_[0] * $_[1]; $ptr += 4 },
+            4 => sub { push @{$out_val}, $_[0]; $ptr += 2 },
+            5 => sub {
+                if ( $_[0] != 0 ) { $ptr = $_[1]; }
+                else              { $ptr += 3; }
+            },
+            6 => sub {
+                if ( $_[0] == 0 ) { $ptr = $_[1]; }
+                else              { $ptr += 3; }
+            },
+            7 => sub {
+                if   ( $_[0] < $_[1] ) { $state->[ $_[2] ] = 1; }
+                else                   { $state->[ $_[2] ] = 0; }
+                $ptr += 4;
+            },
+            8 => sub {
+                if ( $_[0] == $_[1] ) {
+                    $state->[ $_[2] ] = 1;
+                }
+                else {
+                    $state->[ $_[2] ] = 0;
+                }
+                $ptr += 4;
+            },
 
-        # write - note the $arg1 here, we don't want to input anything
-        # in the current state! I.e. implicit positional mode is a no-no
-        3 => sub { $state[$arg1] = $indata; $ptr += 2 },
+        );
 
-        # read
-        4 => sub { push @output, $a1; $ptr += 2 },
+        if ( $op == 3 ) {
+            $state->[$a1] = shift @$in_val;
+            $ptr += 2;
+        }
+        else {
+            $a1 = $mask->[0] ? $a1 : $state->[$a1];
+            $a2 = $mask->[1] ? $a2 : $state->[$a2];
+            $ops{$op}->( $a1, $a2, $a3 );
+        }
+    }
+    return ( $state, $out_val );
 
-	5 => sub {    # jump-if-true
-            if ( $a1 != 0 ) { $ptr = $a2 }
-            else            { $ptr += 3 }
-        },
-        6 => sub {    # jump-if-false
-            if ( $a1 == 0 ) { $ptr = $a2 }
-            else            { $ptr += 3 }
-        },
-        7 => sub {    # less than
-            if   ( $a1 < $a2 ) { $state[$dest] = 1 }
-            else               { $state[$dest] = 0 }
-            $ptr += 4;
-        },
-        8 => sub {    # equals
-            if   ( $a1 == $a2 ) { $state[$dest] = 1 }
-            else                { $state[$dest] = 0 }
-            $ptr += 4;
-        },
-    );
-    die "unknown opcode: $opcode!" unless exists $ops{$opcode};
-    $ops{$opcode}->();
 }
 
-sub dump_state {      # shows a pretty-printed grid of the current state
-    my @show = @state;
+sub dump_state {    # shows a pretty-printed grid of the current state
+    my @show = split( ',', $_[0] );
     print '   ';
     for my $i ( 0 .. 9 ) { printf( "___%d ", $i ) }
     print "\n";
