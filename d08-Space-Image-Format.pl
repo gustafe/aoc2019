@@ -23,36 +23,26 @@ while (<$fh>) { chomp; s/\r//gm; push @file_contents, $_; }
 my @input        = split( //, $file_contents[0] );
 my $height       = 6;
 my $width        = 25;
-my $size         = scalar @input;
-my $chunks       = $size / $width;
-my $no_of_layers = $chunks / $height;
-#say "size: $size chunks: $chunks layers: $no_of_layers";
 
 my $layers;
-
+my ( $product, $min ) = ( undef, 10_000 );
 while (@input) {
     my $count = 0;
     my $layer;
-
+    my %freq;
     while ( $count < $height * $width ) {
-        push @$layer, shift @input;
+	my $d = shift @input;
+        push @$layer, $d;
+	$freq{$d}++;
         $count++;
+    }
+    if ($freq{0} < $min) {
+	$min = $freq{0};
+	$product = $freq{1} * $freq{2};
     }
     push @$layers, $layer;
 }
 
-my ( $product, $min ) = ( undef, 10_000 );
-
-foreach my $layer (@$layers) {
-    my $count;
-    foreach my $d (@$layer) {
-        $count->{$d}++;
-    }
-    if ( $count->{0} < $min ) {
-        $min     = $count->{0};
-        $product = $count->{1} * $count->{2};
-    }
-}
 say "Part 1: ",$product;
 say "Part 2:";
 my $image;
