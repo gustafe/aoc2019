@@ -73,19 +73,28 @@ sub fire_laser {
     my @list;
     my @tail;
     for my $angle ( sort { $a <=> $b } keys %angles ) {
-        if ( $angle < -90 ) {
+        if ( $angle < -90 ) { # this value found by inspection
             push @tail, $angle;
         }
         else {
             push @list, $angle;
         }
+	# reorder by distance
+	my @objects = sort {$a->[0] <=> $b->[0]} @{$angles{$angle}};
+	$angles{$angle} = [@objects];
     }
-
-    #    @list = @list, @tail;
+    my $ans;
     my $count   = 1;
-    my $entry   = ( @list, @tail )[199];
-    my @targets = sort { $a->[0] <=> $b->[0] } @{ $angles{$entry} };
-    return $targets[0]->[1] * 100 + $targets[0]->[2];
+    foreach my $entry (@list,@tail) {
+	my $target = shift @{$angles{$entry}};
+	if ($count==200) {
+	    $ans = $target->[1]*100 + $target->[2];
+	    last;
+	}
+	$count++;
+    }
+    die "seems there's a flaw in the algorithm!" unless defined $ans;
+    return $ans;
 }
 
 sub find_occlusions {
