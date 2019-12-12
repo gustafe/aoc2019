@@ -112,21 +112,19 @@ sub run_code {
         # check if we have a repeat
         # for each dimension
         for my $k ( 0 .. 2 ) {
-            if (
-                all { $matrix->[$_]->{pos}->[$k] == $start_matrix->[$_]->[$k] }
-                ( 0 .. 3 )
-                  and all { $matrix->[$_]->{vel}->[$k] == 0 } ( 0 .. 3 )
-              )
+            if (  all { $matrix->[$_]->{vel}->[$k] == 0 } ( 0 .. 3 ) )
             {
-                say "cycle for $k at step $steps";
+                say "zero velocity vector for $k at step $steps";
                 push @{ $cycles[$k] }, $steps;
             }
         }
 
         $steps++;
     }
+    # due to symmetry, every loop "stops" with 0 speed twice, so we
+    # multiply the cycles by 2
 
-    my $cycle_loops = lcm( map { $cycles[$_]->[0] } ( 0 .. 2 ) );
+    my $cycle_loops = lcm( map { $cycles[$_]->[0] * 2} ( 0 .. 2 ) );
     return [ $energy, $cycle_loops ];
 
 }
