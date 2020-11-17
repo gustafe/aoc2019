@@ -10,7 +10,9 @@ use Modern::Perl '2015';
 # useful modules
 use List::Util qw/sum/;
 use Data::Dumper;
+use Test::More;
 use POSIX qw/floor/;
+
 #### INIT - load input data from file into array
 my $testing = 0;
 my @input;
@@ -34,5 +36,7 @@ while (@input) {
     }
 
 }
-say "Part 1: $sum";
-say "Part 2: $sum2";
+is( $sum, 3216868, "Part 1: $sum");
+is( $sum2, 4822435, "Part 2: $sum2");
+done_testing();
+
